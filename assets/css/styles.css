@@ -1,0 +1,26 @@
+
+button.pr-update {
+	font-size: 18px;
+	padding: 25px;
+}
+
+.form-table td > input {
+	width: 40em !important;
+}
+
+.alert-error {
+	background: #ff6666;
+	border: 1px solid #ff3232;
+	display: inline-block;
+	padding: 15px 25px;
+	color: #333333;
+}
+
+.alert-success {
+	background: #7fff7f;
+	border: 1px solid #009900;
+	display: block;
+	width: 50%;
+	padding: 15px 25px;
+	color: #333333;
+}
