@@ -3,9 +3,9 @@
 require_once(dirname(__FILE__) . '/../../../wp-load.php');
 require_once(dirname(__FILE__) . '/classes/PricerunnerFeed.php');
 
-use CustomValidator\WooCommerceProductCollectionValidator;
 use PricerunnerSDK\PricerunnerSDK;
 use PricerunnerSDK\Errors\ProductErrorRenderer;
+use CustomValidator\WooCommerceProductCollectionValidator;
 
 $pricerunnerFeed = new PricerunnerFeed();
 

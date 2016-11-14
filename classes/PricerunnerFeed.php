@@ -1,7 +1,7 @@
 <?php
 
 require_once(dirname(__FILE__) . '/../models/Model.php');
-require_once(dirname(__FILE__) . '/../PricerunnerSDK/files.php');
+require_once(dirname(__FILE__) . '/../pricerunner-php-sdk/src/files.php');
 require_once(dirname(__FILE__) . '/../CustomValidator/WooCommerceProductValidator.php');
 require_once(dirname(__FILE__) . '/../CustomValidator/WooCommerceProductCollectionValidator.php');
 
