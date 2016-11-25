@@ -137,9 +137,13 @@ class PricerunnerFeed
 	 * 
 	 * @return 	void
 	 */
-	public function install()
+	public function install($dbVersion)
 	{
+		// Install our MySQL table.
 		$this->model->install();
+
+		// Set the database version for this plugin.
+		update_option('pricerunner_db_version', $dbVersion);
 
 		// Set a random string as the unique hash identifier. This is used later by Pricerunner to access the product feed in XML-format
 		update_option('pricerunner_feed_hash', PricerunnerSDK::getRandomString());

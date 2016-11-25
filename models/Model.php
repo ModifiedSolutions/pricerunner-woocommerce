@@ -10,13 +10,6 @@ class Model
 	private $db;
 
 	/**
-	 * Delimiter defined in the class constructor.
-	 * 
-	 * @var string
-	 */
-	private $delimiter;
-
-	/**
 	 * Used to hold the active categories for each particular product. Gets reset for every product that's being looped.
 	 * 
 	 * @var array
@@ -50,16 +43,6 @@ class Model
 		$this->categories = $this->getCategoriesFromDatabase();
 
         $this->sanitizedProducts = array();
-
-		// Check if the current WooCommerce version is below version 2.1. This is where WC_DELIMITER was presented.
-		// https://woocommerce.wordpress.com/2013/11/25/woocommerce-2-1-beta-1-is-ready/
-		$wcVersion = (float) WOOCOMMERCE_VERSION;
-
-		if ($wcVersion < 2.1) {
-			$this->delimiter = '|';
-		} else {
-			$this->delimiter = WC_DELIMITER;
-		}
 	}
 
 	/**
@@ -71,8 +54,7 @@ class Model
 	 */
 	public function getActiveFeed($path)
 	{
-		$sql = "SELECT
-			*
+		$sql = "SELECT *
 		FROM
 			`". $this->db->prefix ."pricerunner_feeds`
 		WHERE
@@ -472,7 +454,7 @@ class Model
 			phone varchar(32) DEFAULT '' NOT NULL,
 			email varchar(255) DEFAULT '' NOT NULL,
 			created_at datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
-			UNIQUE KEY id (id)
+			PRIMARY KEY  (id)
 		) ". $charsetCollate .";";
 
 		// Load WP file to run this SQL query

@@ -28,9 +28,8 @@ $dbVersion = '1.0';
 /**
  * Check if the registered version is equal to our actual version. If not, run the installer again to update.
  */
-if (get_option('pricerunner_db_version') != $dbVersion) {
+if (get_option('pricerunner_db_version', false) !== false && get_option('pricerunner_db_version') != $dbVersion) {
 	pricerunner_install();
-	update_option('pricerunner_db_version', $dbVersion);
 }
 
 /**
@@ -98,10 +97,11 @@ function pricerunner_feed() {
  */
 function pricerunner_install()
 {
+    global $dbVersion;
 	require (dirname(__FILE__) .'/classes/PricerunnerFeed.php');
 
 	$pricerunnerFeed = new PricerunnerFeed();
-	$pricerunnerFeed->install();
+	$pricerunnerFeed->install($dbVersion);
 }
 
 /**
@@ -114,3 +114,4 @@ function pricerunner_uninstall()
 	$pricerunnerFeed = new PricerunnerFeed();
 	$pricerunnerFeed->uninstall();
 }
+
