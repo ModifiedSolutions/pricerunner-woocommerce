@@ -16,13 +16,6 @@ class Model
 	 */
 	private $category;
 
-	/**
-	 * Used to hold all categories from the database.
-	 * 
-	 * @var array
-	 */
-	private $categories;
-
     /**
      * Used to recall parental product data inside of loops.
      *
@@ -39,9 +32,6 @@ class Model
 	public function __construct($db)
 	{
 		$this->db = $db;
-
-		$this->categories = $this->getCategoriesFromDatabase();
-
         $this->sanitizedProducts = array();
 	}
 
@@ -147,6 +137,8 @@ class Model
         }
         unset($product);
 
+        $this->setProductMetaData($getProducts);
+
         $products = [];
 		foreach ($getProducts as $product) {
 
@@ -185,20 +177,20 @@ class Model
 
         $pricerunnerProduct = new \PricerunnerSDK\Models\Product();
 
-		// Get product specific data from another table
-		$data = $this->getProductData($product->id);
-        if (!empty($data)){
-            for ($i = 0; $i < count($data); $i++) {
-                if ($data[$i]->meta_key == '_price') {
-                    $pricerunnerProduct->setPrice($data[$i]->meta_value);
-                }
 
-                if ($data[$i]->meta_key == '_stock_status') {
-                    $stockStatus = $data[$i]->meta_value == 'instock' ? 'In Stock' : 'Out of Stock';
-                    $pricerunnerProduct->setStockStatus($stockStatus);
-                }
-            }
+        if (isset($product->metas['_price'])) {
+            $pricerunnerProduct->setPrice($product->metas['_price']);
         }
+
+        if (isset($product->metas['_stock_status'])) {
+            $stockStatus = $product->metas['_stock_status'] == 'instock' ? 'In Stock' : 'Out of Stock';
+            $pricerunnerProduct->setStockStatus($stockStatus);
+        }
+
+        if (isset($product->metas['_sku'])) {
+            $pricerunnerProduct->setSku($product->metas['_sku']);
+        }
+
 
         if ($product->parentId == 0) {
             $category = $product->category;
@@ -214,7 +206,10 @@ class Model
         }
         $pricerunnerProduct->setProductName($productName);
 
-		$pricerunnerProduct->setSku($product->id);
+        if ($pricerunnerProduct->getSku() == '') {
+            $pricerunnerProduct->setSku($product->id);
+        }
+
 		$pricerunnerProduct->setShippingCost('');
 		$pricerunnerProduct->setProductUrl(get_bloginfo('wpurl') .'/?product='. $product->slug);
 
@@ -248,118 +243,33 @@ class Model
 		return $pricerunnerProduct;
 	}
 
+    public function setProductMetaData() 
+    {  
+        $productIds = implode(array_keys($this->sanitizedProducts), ',');
 
-	/**
-	 * Get product specific data.
-	 * 
-	 * @param 	int 	$id 
-	 * @return 	array
-	 */
-	public function getProductData($id)
-	{
         $sql = "
-        SELECT
-			`meta_key`,
-			`meta_value`
-		FROM
-			`". $this->db->prefix ."postmeta`
-		WHERE
-			`post_id` = '". $id ."'
-			AND (`meta_key` = '_price' OR `meta_key` = '_stock_status')
-        ";
+            SELECT
+                `post_id`,
+                `meta_key`,
+                `meta_value`
+            FROM
+                `". $this->db->prefix ."postmeta`
+            WHERE
+                `post_id` IN(". $productIds .")
 
-		return $this->getResults($sql);
-	}
+            ORDER BY post_id ASC";
 
-	/**
-	 * Return active category (with parent categories) in a breadcrumb format
-	 * 
-	 * @param 	int 	$productId 
-	 * @return 	string
-	 */
-	public function fetchProductCategory($productId)
-	{
-		// Reset the category-string
-		$this->category = array();
+        $productMeta = $this->getResults($sql);
 
-		// Get the active category for this product
-		$sql = "SELECT
-			tr.`term_taxonomy_id` AS `id`
-		FROM
-			`". $this->db->prefix ."term_relationships` AS `tr`
-		INNER JOIN
-			`". $this->db->prefix ."term_taxonomy` AS `tt`
-			ON tt.`term_taxonomy_id` = tr.`term_taxonomy_id`
-		WHERE
-			tr.`object_id` = '". $productId ."' AND
-			tt.`taxonomy` = 'product_cat'";
+        foreach ($productMeta as $key => $meta) {
+            if(!isset($this->sanitizedProducts[$meta->post_id]->metas)) {
+                $this->sanitizedProducts[$meta->post_id]->metas = array();
+            }
 
-		// Run query to get the active category id
-		$query = $this->getResults($sql);
+            $this->sanitizedProducts[$meta->post_id]->metas[$meta->meta_key] = $meta->meta_value;
+        }
+    }
 
-		if (count($query) == 0) {
-			return false;
-		}
-
-		// Run our recursive method to get the parent/child categories
-		$this->getCategoryFromArray($query[0]->id);
-
-		// Reverse the result for correct parent/child showing and return the imploded value
-		return implode(' > ', array_reverse($this->category));
-	}
-
-	/**
-	 * Recursively run through our categories object and return parent/child listing
-	 * 
-	 * @param 	int 	$id 
-	 * @return 	void
-	 */
-	private function getCategoryFromArray($id)
-	{
-		if (array_key_exists($id, $this->categories)) {
-			$this->category[] = $this->categories[$id]['name'];
-
-			// If parent is not 0 then run this method again recursively
-			if ($this->categories[$id]['parent'] != 0) {
-				$this->getCategoryFromArray($this->categories[$id]['parent']);
-			}
-		}
-	}
-
-	/**
-	 * Get all categories from the database and put into a property for later use.
-	 * 
-	 * @return 	array
-	 */
-	public function getCategoriesFromDatabase()
-	{
-		$sql = "SELECT
-			t.`name`,
-			tt.`term_taxonomy_id` AS `id`,
-			tt.`parent`
-		FROM
-			`". $this->db->prefix ."terms` AS `t`
-
-		INNER JOIN
-			`". $this->db->prefix ."term_taxonomy` AS `tt`
-			ON tt.`term_id` = t.`term_id`
-
-		WHERE
-			tt.`taxonomy` = 'product_cat'";
-
-		$query = $this->getResults($sql);
-
-		$categories = array();
-
-		foreach ($query as $key => $value) {
-			$categories[$value->id] = array(
-				'name' 		=> $value->name,
-				'parent' 	=> $value->parent
-			);
-		}
-
-		return $categories;
-	}
 
 	public function getCategories()
 	{
@@ -382,26 +292,26 @@ class Model
 	}
 
 
-	/**
-	 * @param 	array 	$categories 
-	 * @return 	array
-	 */
-	public function buildCategoryStrings($categories)
-	{
-		$categoryStringArray = array();
-
-		foreach ($categories as $id => $category) {
-			if ($category->parent == 0) {
-				$categoryStringArray[$id] = $category->name;
-			} else {
+    /**
+     * @param   array   $categories 
+     * @return  array
+     */
+    public function buildCategoryStrings($categories)
+    {
+        $categoryStringArray = array();
+        
+        foreach ($categories as $id => $category) {
+            if ($category->parent == 0) {
+                $categoryStringArray[$id] = $category->name;
+            } else {
                 // Fix for orphans.
                 $parent = isset($categoryStringArray[$category->parent]) ? $categoryStringArray[$category->parent] . ' > ' : '';
-				$categoryStringArray[$id] = $parent . $category->name;
-			}
-		}
+                $categoryStringArray[$id] = $parent . $category->name;
+            }
+        }
 
-		return $categoryStringArray;
-	}
+        return $categoryStringArray;
+    }
 
 	/**
 	 * Save contact informations to the database when activate button has been clicked
