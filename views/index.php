@@ -1,9 +1,16 @@
+<?php
 
-<link rel="stylesheet" href="<?= plugins_url( '' , dirname(__FILE__) ); ?>/assets/css/styles.css">
+	if (!defined('ABSPATH')) exit;
 
+	$nonce = wp_create_nonce('pricerunner_form');
+	$postUrl = admin_url('admin.php?page=pricerunner-xml-feed');
+
+?>
 <div class="wrap">
 	
-	<form method="POST">
+	<form method="post" action="<?php echo $postUrl; ?>">
+
+		<input type="hidden" name="_wpnonce" value="<?php echo $nonce; ?>" />
 
 		<h1>Pricerunner XML Feed</h1>
 

@@ -1,9 +1,15 @@
+<?php
+	if (!defined('ABSPATH')) exit;
 
-<link rel="stylesheet" href="<?= plugins_url( '' , dirname(__FILE__) ); ?>/assets/css/styles.css">
+	$nonce = wp_create_nonce('pricerunner_form');
+	$postUrl = admin_url('admin.php?page=pricerunner-xml-feed');
+?>
 
 <div class="wrap">
 	
-	<form method="POST">
+	<form method="post" action="<?php echo $postUrl; ?>">
+
+		<input type="hidden" name="_wpnonce" value="<?php echo $nonce; ?>" />
 		
 		<h1>Pricerunner XML Feed</h1>
 
@@ -18,11 +24,11 @@
 				</p>
 			</div>
 		<?php else: ?>
-			<div id="setting-error-settings_updated" class="updated settings-error notice">
+			<!--<div id="setting-error-settings_updated" class="updated settings-error notice">
 				<p>
 					STATUS: ACTIVE
 				</p>
-			</div>
+			</div>-->
 		<?php endif; ?>
 
 		<table class="form-table">
@@ -78,8 +84,8 @@
 			If you want to reset the feed Pricerunner will stop monitoring your shop. Upon reactivation a new feed URL will be generated, and your request must be manually approved by Pricerunner again.
 		</p>
 
-		<button onclick="return confirm('Are you sure you want to reset the feed?');" type="submit" class="button button-primary" name="pr_feed_reset">Reset Pricerunner Feed</button>
-		<a href="<?= $activeFeed->feed_url; ?>&test=1" target="_blank" onclick="return confirm('This operation might take a while, do you want to continue?');" class="button">Run Feed Test</a>
+		<button onclick="return confirm('Are you sure you want to reset the feed?');" type="submit" class="button" name="pr_feed_reset">Reset Pricerunner Feed</button>
+		<a href="<?= $activeFeed->feed_url; ?>&amp;test=1" target="_blank" onclick="return confirm('This operation might take a while, do you want to continue?');" class="button button-primary">Run Feed Test</a>
 
 	</form>
 
