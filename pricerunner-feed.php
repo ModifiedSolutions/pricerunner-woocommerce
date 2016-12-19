@@ -6,7 +6,7 @@
      * Plugin Name: Pricerunner Feed
      * Plugin URI: 
      * Description: Product XML Feed For Pricerunner.dk
-     * Version: 1.0.7
+     * Version: 1.0.8
      * Author: Modified Solutions ApS
      * Author URI: https://www.modified.dk/
      * Developer: Modified Solutions ApS
@@ -21,7 +21,7 @@
      * This definition must be defined.
      * If it isn't the Pricerunner SDK will not be allowed to function.
      */
-    define('PRICRUNNER_OFFICIAL_PLUGIN_VERSION', 'woo-1.0.7');
+    define('PRICRUNNER_OFFICIAL_PLUGIN_VERSION', 'woo-1.0.8');
 
 
     /*
