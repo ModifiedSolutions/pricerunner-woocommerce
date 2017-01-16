@@ -6,6 +6,26 @@
 
     class Model
     {
+        /**
+         * Contains our singleton instance.
+         * @var \Pricerunner\Model
+         */
+        public static $instance;
+
+        /**
+         * Return a singleton instance of this class.
+         * @return \Pricerunner\Model
+         */
+        public static function make()
+        {
+            if (is_null(static::$instance)) {
+                static::$instance = new static($GLOBALS['wpdb']);
+            }
+
+            return static::$instance;
+        }
+
+
     	/**
     	 * This is the stored $wpdb object directly from Wordpress
     	 * 
@@ -39,26 +59,6 @@
             $this->sanitizedProducts = array();
     	}
 
-    	/**
-    	 * Get the current active feed.
-    	 * 
-    	 * @param 	string 	$path 
-    	 * 
-    	 * @return 	array
-    	 */
-    	public function getActiveFeed($path)
-    	{
-    		$sql = "SELECT *
-    		FROM
-    			`". $this->db->prefix ."pricerunner_feeds`
-    		WHERE
-    			`feed_url` = '". $path ."'
-    		ORDER BY
-    			`id` DESC
-    		LIMIT 1";
-
-    		return $this->getResults($sql)[0];
-    	}
 
     	/**
     	 * Get all of the active products. Listed in a format that suits Pricerunner's requirements.
@@ -160,6 +160,7 @@
 
             return $products;
     	}
+
 
     	/**
     	 * Every product needs to run through this function so the SDK can validate them correctly.
@@ -308,72 +309,6 @@
             return $categoryStringArray;
         }
 
-    	/**
-    	 * Save contact informations to the database when activate button has been clicked
-    	 * 
-    	 * @param 	string 	$domain 
-    	 * @param 	string 	$name 
-    	 * @param 	string 	$url 
-    	 * @param 	string 	$phone 
-    	 * @param 	string 	$email 
-    	 * 
-    	 * @return 	array
-    	 */
-    	public function saveContactInformations($domain, $name, $url, $phone, $email) 
-    	{
-    		$db = $this->db;
-
-    		$domain = sanitize_text_field($db->_real_escape($domain));
-    		$name = sanitize_text_field($db->_real_escape($name));
-    		$url = sanitize_text_field($db->_real_escape($url));
-    		$phone = sanitize_text_field($db->_real_escape($phone));
-    		$email = sanitize_text_field($db->_real_escape($email));
-
-    		$sql = "INSERT INTO `". $db->prefix ."pricerunner_feeds`
-    		(`domain`, `name`, `feed_url`, `phone`, `email`, `created_at`) VALUES
-    		('". $domain ."', '". $name ."', '". $url ."', '". $phone ."', '". $email ."', NOW())";
-
-    		$this->query($sql);
-    	}
-
-    	/**
-    	 * The DB installer.
-    	 * 
-    	 * @return 	void
-    	 */
-    	public function install()
-    	{
-    		$db = $this->db;
-
-    		// Define table name
-    		$tableName = $db->prefix .'pricerunner_feeds';
-
-    		// This is not supported pre-version 3.5. We have to create the collation string manually if we want to support earlier versions...
-    		$charsetCollate = $db->get_charset_collate();
-
-    		$sql = "CREATE TABLE ". $tableName ." (
-    			id int(11) NOT NULL AUTO_INCREMENT,
-    			domain varchar(64) DEFAULT '' NOT NULL,
-    			name varchar(64) DEFAULT '' NOT NULL,
-    			feed_url varchar(255) DEFAULT '' NOT NULL,
-    			phone varchar(32) DEFAULT '' NOT NULL,
-    			email varchar(255) DEFAULT '' NOT NULL,
-    			created_at datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
-    			PRIMARY KEY  (id)
-    		) ". $charsetCollate .";";
-
-    		// Load WP file to run this SQL query
-    		require_once (ABSPATH .'wp-admin/includes/upgrade.php');
-    		dbDelta($sql);
-    	}
-
-    	public function uninstall()
-    	{
-    		$tableName = $this->db->prefix .'pricerunner_feeds';
-    		$sql = "DROP TABLE IF EXISTS `". $tableName ."`";
-
-    		$this->db->query($sql);
-    	}
 
     	/**
     	 * Use Wordpress' $wpdb object to create a query.
@@ -385,6 +320,7 @@
     	{
     		return $this->db->query($query);
     	}
+
 
     	/**
     	 * Use Wordpress' $wpdb object to get results.

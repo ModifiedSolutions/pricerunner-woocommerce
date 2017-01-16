@@ -5,12 +5,25 @@
 	$nonce = wp_create_nonce('pricerunner_form');
 	$postUrl = admin_url('admin.php?page=pricerunner-xml-feed');
 
+
+	// Feed URL
+	$feedUrl = get_feed_link(Pricerunner\FeedLoader::FEED_IDENTIFIER);
+
+	// ?hash=... or &hash=...
+	$parameterChar = '?';
+	if (strpos($feedUrl, $parameterChar) !== false) {
+		$parameterChar = '&';
+	}
+
+	$feedUrl = $feedUrl . $parameterChar . 'hash=' . get_option('pricerunner_feed_hash');
+
 ?>
 <div class="wrap">
 	
 	<form method="post" action="<?php echo $postUrl; ?>">
 
 		<input type="hidden" name="_wpnonce" value="<?php echo $nonce; ?>" />
+		<input type="hidden" name="_pr_action" value="EnableFeed" />
 
 		<h1>Pricerunner XML Feed</h1>
 
@@ -49,7 +62,7 @@
 					<label for="feed_url">Feed URL</label>
 				</th>
 				<td>
-					<input type="text" name="feed_url" id="feed_url" value="<?= $feedPath; ?>" readonly>
+					<input type="text" name="feed_url" id="feed_url" value="<?= $feedUrl; ?>" readonly>
 				</td>
 			</tr>
 

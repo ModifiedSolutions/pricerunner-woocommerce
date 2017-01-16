@@ -1,8 +1,15 @@
 <?php
 	if (!defined('ABSPATH')) exit;
 
-	$nonce = wp_create_nonce('pricerunner_form');
+	$nonce   = wp_create_nonce('pricerunner_form');
 	$postUrl = admin_url('admin.php?page=pricerunner-xml-feed');
+
+	$domain  = get_option('pricerunner_contact_domain');
+	$name    = get_option('pricerunner_contact_name');
+	$email   = get_option('pricerunner_contact_email');
+	$phone   = get_option('pricerunner_contact_phone');
+	$feedUrl = get_option('pricerunner_feed_url');
+
 ?>
 
 <div class="wrap">
@@ -10,6 +17,7 @@
 	<form method="post" action="<?php echo $postUrl; ?>">
 
 		<input type="hidden" name="_wpnonce" value="<?php echo $nonce; ?>" />
+		<input type="hidden" name="_pr_action" value="ResetFeed" />
 		
 		<h1>Pricerunner XML Feed</h1>
 
@@ -38,7 +46,7 @@
 					<label for="feed_domain">Domain</label>
 				</th>
 				<td>
-					<?= $activeFeed->domain; ?>
+					<?= $domain; ?>
 				</td>
 			</tr>
 
@@ -47,7 +55,7 @@
 					<label for="feed_domain">Name/Company Name</label>
 				</th>
 				<td>
-					<?= $activeFeed->name; ?>
+					<?= $name; ?>
 				</td>
 			</tr>
 
@@ -56,7 +64,7 @@
 					<label for="feed_url">Feed URL</label>
 				</th>
 				<td>
-					<a href="<?= $activeFeed->feed_url; ?>" target="_blank"><?= $activeFeed->feed_url; ?></a>
+					<a href="<?= $feedUrl; ?>" target="_blank"><?= $feedUrl; ?></a>
 				</td>
 			</tr>
 
@@ -65,7 +73,7 @@
 					<label for="feed_url">Phone</label>
 				</th>
 				<td>
-					<?= $activeFeed->phone; ?>
+					<?= $phone; ?>
 				</td>
 			</tr>
 
@@ -74,7 +82,7 @@
 					<label for="feed_url">E-mail</label>
 				</th>
 				<td>
-					<?= $activeFeed->email; ?>
+					<?= $email; ?>
 				</td>
 			</tr>
 
@@ -85,7 +93,7 @@
 		</p>
 
 		<button onclick="return confirm('Are you sure you want to reset the feed?');" type="submit" class="button" name="pr_feed_reset">Reset Pricerunner Feed</button>
-		<a href="<?= $activeFeed->feed_url; ?>&amp;test=1" target="_blank" onclick="return confirm('This operation might take a while, do you want to continue?');" class="button button-primary">Run Feed Test</a>
+		<a href="<?= $feedUrl; ?>&amp;test=1" target="_blank" onclick="return confirm('This operation might take a while, do you want to continue?');" class="button button-primary">Run Feed Test</a>
 
 	</form>
 

@@ -6,7 +6,7 @@
      * Plugin Name: Pricerunner Feed
      * Plugin URI: 
      * Description: Product XML Feed For Pricerunner.dk
-     * Version: 1.0.8
+     * Version: 1.0.9
      * Author: Modified Solutions ApS
      * Author URI: https://www.modified.dk/
      * Developer: Modified Solutions ApS
@@ -21,127 +21,54 @@
      * This definition must be defined.
      * If it isn't the Pricerunner SDK will not be allowed to function.
      */
-    define('PRICRUNNER_OFFICIAL_PLUGIN_VERSION', 'woo-1.0.8');
+    define('PRICRUNNER_OFFICIAL_PLUGIN_VERSION', 'woo-1.0.9');
 
 
-    /*
-     * THIS IS THE DATABASE VERSION.
-     * 
-     * Don't edit this one unless you make edits to the pricerunner_install() database structure.
-     * This version number is not equal to the plugin's version itself.
-     */
-    $dbVersion = '1.0';
+    require_once dirname(__FILE__) .'/classes/FeedLoader.php';
+    require_once(dirname(__FILE__) . '/classes/Plugin.php');
 
-    /*
-     * Check if the registered version is equal to our actual version. If not, run the installer again to update.
-     */
-    if (get_option('pricerunner_db_version', false) !== false && get_option('pricerunner_db_version') != $dbVersion) {
-    	pricerunner_install();
-    }
+    require_once(dirname(__FILE__) . '/models/Model.php');
+    require_once(dirname(__FILE__) . '/pricerunner-php-sdk/src/files.php');
+    require_once(dirname(__FILE__) . '/CustomValidator/WooCommerceProductValidator.php');
+    require_once(dirname(__FILE__) . '/CustomValidator/WooCommerceProductCollectionValidator.php');
 
-    /*
-     * Register our new admin menu in the Wordpress dashboard.
-     */
-    add_action('admin_menu', 'pricerunner_feed_menu');
 
-    add_action('admin_enqueue_scripts', 'pricerunner_load_admin_style');
 
-    /*
-     * Launch the install function when this plugin is being activated.
-     */
-    register_activation_hook(__FILE__, 'pricerunner_install');
+    // Register feed.
+    $pricerunnerPlugin = Pricerunner\Plugin::make();
+    $pricerunnerLoader = Pricerunner\FeedLoader::make();
+    add_action('init', array($pricerunnerLoader, 'init'));
+
+
+
+    add_action('admin_menu', array($pricerunnerPlugin, 'registerAdminMenuItem'));
+    add_action('admin_enqueue_scripts', array($pricerunnerPlugin, 'registerAdminCss'));
+
+    register_activation_hook(__FILE__, array($pricerunnerPlugin, 'activate'));
+    register_deactivation_hook(__FILE__, array($pricerunnerPlugin, 'deactivate'));
+
+
 
     /*
-     * Launch the uninstall function when this plugin is being deactivated.
+     * Initializer
      */
-    register_deactivation_hook(__FILE__, 'pricerunner_uninstall');
+    function pricerunner_feed()
+    {
+        $loader = Pricerunner\FeedLoader::make();
+        $plugin = Pricerunner\Plugin::make();
 
-    /*
-     * Initialize function to add our page to the admin menus.
-     */
-    function pricerunner_feed_menu() {
-        if (!current_user_can('manage_options'))  {
-            return;
-        }
-
-    	// For Roles/Capabilities refer to the Wordpress docs: https://codex.wordpress.org/Roles_and_Capabilities
-    	add_menu_page('Pricerunner XML Feed', 'Pricerunner Feed', 'manage_options', 'pricerunner-xml-feed', 'pricerunner_feed', 'dashicons-admin-generic');
-    }
-
-    /**
-     * Check if WooCommerce is active.
-     *
-     * @return  bool
-     */
-    function pricerunner_woocommerce_active_check() {
-        $active_plugins = [];
-
-        if (is_multisite()) {
-            $active_plugins = array_keys(get_site_option('active_sitewide_plugins', array()));
-        } else {
-            $active_plugins = apply_filters('active_plugins', get_option('active_plugins', array()));
-        }
-
-        foreach ($active_plugins as $active_plugin) {
-            $active_plugin = explode('/', $active_plugin);
-            if (isset($active_plugin[1]) && $active_plugin[1] === 'woocommerce.php') {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /*
-     * Run our main function
-     */
-    function pricerunner_feed() {
     	// Check if WooCommerce is activated.
-    	if (!pricerunner_woocommerce_active_check()) {
-    		wp_die('<div class="wrap"><div id="setting-error-invalid_siteurl" class="error settings-error notice"><p>WooCommerce is not activated.</p></div></div>');
+    	if (!$loader->isWoocommerceActive()) {
+            $plugin->error(Pricerunner\Plugin::WOOCOMMERCE_NOT_ACTIVE);
     	}
 
     	if (!current_user_can('manage_options'))  {
-    		wp_die('<div class="wrap"><div id="setting-error-invalid_siteurl" class="error settings-error notice"><p>'. __('You do not have sufficient permissions to access this page.') .'</p></div></div>');
+    		$plugin->error(Pricerunner\Plugin::NOT_SUFFICIENT_PERMISSIONS);
     	}
 
-    	require_once dirname(__FILE__) .'/classes/PricerunnerFeed.php';
-
-    	$pricerunnerFeed = new Pricerunner\Feed();
-    	$pricerunnerFeed->init();
-    }
-
-    /*
-     * Database installer. Controlled by $dbVersion and will launch if the current version doesn't match the value.
-     */
-    function pricerunner_install()
-    {
-        global $dbVersion;
-    	require_once dirname(__FILE__) .'/classes/PricerunnerFeed.php';
-
-    	$pricerunnerFeed = new Pricerunner\Feed();
-    	$pricerunnerFeed->install($dbVersion);
-    }
-
-    /*
-     * Plugin uninstaller
-     */
-    function pricerunner_uninstall()
-    {
-    	require_once dirname(__FILE__) .'/classes/PricerunnerFeed.php';
-
-    	$pricerunnerFeed = new Pricerunner\Feed();
-    	$pricerunnerFeed->uninstall();
-    }
-
-    /*
-     * Loads our custom CSS.
-     */
-    function pricerunner_load_admin_style($hook)
-    {
-        if ($hook != 'toplevel_page_pricerunner-xml-feed') {
-            return;
+        if ($nonceMessage = $plugin->checkNonce() !== true) {
+            $plugin->error($nonceMessage);
         }
 
-        wp_enqueue_style('pricerunner_admin_style', plugins_url('assets/css/styles.css', __FILE__));
+        echo $plugin->displayPage();
     }
