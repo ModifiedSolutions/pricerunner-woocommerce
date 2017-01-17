@@ -15,27 +15,17 @@
 		$parameterChar = '&';
 	}
 
-	$feedUrl = $feedUrl . $parameterChar . 'hash=' . get_option('pricerunner_feed_hash');
+	$feedUrl = esc_url($feedUrl . $parameterChar . 'hash=' . get_option('pricerunner_feed_hash'));
 
 ?>
 <div class="wrap">
 	
-	<form method="post" action="<?php echo $postUrl; ?>">
+	<form method="post" action="<?php echo esc_url($postUrl); ?>">
 
 		<input type="hidden" name="_wpnonce" value="<?php echo $nonce; ?>" />
 		<input type="hidden" name="_pr_action" value="EnableFeed" />
 
 		<h1>Pricerunner XML Feed</h1>
-
-		<?php if (isset($errors) && count($errors) > 0): ?>
-			<div id="setting-error-invalid_siteurl" class="error settings-error notice">
-				<p>
-				<?php foreach ($errors as $error): ?>
-					- <strong><?= $error ?></strong><br>
-				<?php endforeach; ?>
-				</p>
-			</div>
-		<?php endif; ?>
 
 		<table class="form-table">
 			
@@ -80,7 +70,7 @@
 					<label for="feed_email">E-mail</label>
 				</th>
 				<td>
-					<input type="text" name="feed_email" id="feed_email" value="<?= get_option('admin_email'); ?>">
+					<input type="text" name="feed_email" id="feed_email" value="<?= esc_html(get_option('admin_email')); ?>">
 				</td>
 			</tr>
 

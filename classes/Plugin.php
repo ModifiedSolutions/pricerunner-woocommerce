@@ -199,32 +199,35 @@
 
         public function actionEnableFeed()
         {
-            $errors = $this->validateInputFields($_POST);
+            $input = $this->sanitize($_POST);
+
+            $errors = $this->validateInputFields($input);
 
             if (count($errors) != 0) {
                 return $this->error($errors[0]);
             }
 
             update_option('pricerunner_feed_active', 1);
-            update_option('pricerunner_feed_url', $_POST['feed_url']);
+            update_option('pricerunner_feed_url', $input['feed_url']);
 
-            update_option('pricerunner_contact_name', $_POST['feed_name']);
-            update_option('pricerunner_contact_phone', $_POST['feed_phone']);
-            update_option('pricerunner_contact_email', $_POST['feed_email']);
-            update_option('pricerunner_contact_domain', $_POST['feed_domain']);
+            update_option('pricerunner_contact_name', $input['feed_name']);
+            update_option('pricerunner_contact_phone', $input['feed_phone']);
+            update_option('pricerunner_contact_email', $input['feed_email']);
+            update_option('pricerunner_contact_domain', $input['feed_domain']);
 
             try {
-                PricerunnerSDK::postRegistration(
-                    $_POST['feed_name'], 
-                    $_POST['feed_phone'], 
-                    $_POST['feed_email'], 
-                    $_POST['feed_domain'], 
-                    $_POST['feed_url']
-                );
-                $success = true;
-            } catch (Exception $e) {
-                update_option('pricerunner_feed_active', 0);
 
+                PricerunnerSDK::postRegistration(
+                    $input['feed_name'], 
+                    $input['feed_phone'], 
+                    $input['feed_email'], 
+                    $input['feed_domain'], 
+                    $input['feed_url']
+                );
+
+            } catch (Exception $e) {
+
+                update_option('pricerunner_feed_active', 0);
                 return $this->error(self::API_ERROR);
             }
         }
@@ -273,5 +276,20 @@
             }
 
             return $errors;
+        }
+
+        public function sanitize($input)
+        {
+            foreach ($input as $key => $value) {
+
+                if ($key == 'feed_email') {
+                    $input[$key] = sanitize_email($value);
+                    continue;
+                }
+
+                $input[$key] = sanitize_text_field($value);
+            }
+
+            return $input;
         }
     }

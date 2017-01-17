@@ -4,11 +4,11 @@
 	$nonce   = wp_create_nonce('pricerunner_form');
 	$postUrl = admin_url('admin.php?page=pricerunner-xml-feed');
 
-	$domain  = get_option('pricerunner_contact_domain');
-	$name    = get_option('pricerunner_contact_name');
-	$email   = get_option('pricerunner_contact_email');
-	$phone   = get_option('pricerunner_contact_phone');
-	$feedUrl = get_option('pricerunner_feed_url');
+	$domain  = esc_url(get_option('pricerunner_contact_domain'));
+	$name    = esc_html(get_option('pricerunner_contact_name'));
+	$email   = esc_html(get_option('pricerunner_contact_email'));
+	$phone   = esc_html(get_option('pricerunner_contact_phone'));
+	$feedUrl = esc_url(get_option('pricerunner_feed_url'));
 
 ?>
 
@@ -31,12 +31,6 @@
 					By resetting and reactivating your feed a new Feed URL will be generated.
 				</p>
 			</div>
-		<?php else: ?>
-			<!--<div id="setting-error-settings_updated" class="updated settings-error notice">
-				<p>
-					STATUS: ACTIVE
-				</p>
-			</div>-->
 		<?php endif; ?>
 
 		<table class="form-table">
