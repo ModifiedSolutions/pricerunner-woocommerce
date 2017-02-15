@@ -14,6 +14,7 @@
         const WP_NONCE_NOT_SET = 'WP nonce not set.';
         const INVALID_WP_NONCE = 'WP nonce not valid! Please go back and refresh the page to try again.';
         const API_ERROR = 'An error occured when posting to the API. Please try again!';
+        const CURL_MISSING_ERROR = 'The cURL extension for PHP isn\'t installed on this server configuration. Please install it before using this plugin.';
 
 
         /**
@@ -138,6 +139,24 @@
         }
 
 
+        public function generateFeedUrl()
+        {
+            $hash = get_option('pricerunner_feed_hash');
+            $siteUrl = get_site_url();
+
+            preg_match_all('/https?\:\/\/[\w.]+\.(?:[\w]{2,})(\/[^.\n]+\/?)/', $siteUrl, $matches);
+            $groups = $matches[1];
+
+            if (empty($groups[0])) {
+                $siteUrl .= '/shop';
+            }
+
+            $feed = '/?feed='. FeedLoader::FEED_IDENTIFIER .'&hash='. $hash;
+            
+            return $siteUrl . $feed;
+        }
+
+
         /**
          * Displays a page or call an action.
          */
@@ -174,14 +193,14 @@
                 return self::UNKNOWN_ACTION;
             }
 
-            $action = $_POST['_pr_action'];
+            $action = sanitize_text_field($_POST['_pr_action']);
             $methodName = 'action'. $action;
 
             if (!method_exists($this, $methodName)) {
                 return self::UNKNOWN_ACTION;
             }
 
-            return call_user_method($methodName, $this);
+            return call_user_func(array($this, $methodName));
         }
 
 
@@ -242,6 +261,65 @@
             delete_option('pricerunner_contact_email');
             delete_option('pricerunner_contact_phone');
             delete_option('pricerunner_feed_url');
+        }
+
+
+        public function debug()
+        {
+            // curl
+            $curlVersion = curl_version();
+
+            $output = '';
+
+
+            $feedUrl = get_feed_link(FeedLoader::FEED_IDENTIFIER);
+            $parameterChar = '?';
+            if (strpos($feedUrl, $parameterChar) !== false) {
+                $parameterChar = '&';
+            }
+            $feedUrl = esc_url($feedUrl . $parameterChar . 'hash=' . get_option('pricerunner_feed_hash'));
+            
+            $vars = array(
+                'WP Version'  => get_bloginfo('version'),
+                'WP Site Url' => site_url(),
+                'WP Home Url' => home_url(),
+                'PHP Version' => phpversion(),
+                'Feed URL'    => $feedUrl,
+                'Alternate Feed URL' => @(get_site_url() . '/shop/?feed='. FeedLoader::FEED_IDENTIFIER .'&hash='. get_option('pricerunner_feed_hash')),
+                'Server Software' => $_SERVER["SERVER_SOFTWARE"],
+                'Apache Version' => (function_exists('apache_get_version') ? apache_get_version() : ''),
+                'Loaded Ext. ' => print_r(get_loaded_extensions(), true),
+                'cURL Version' => $curlVersion['version']
+            );
+
+            foreach ($vars as $text => $value) {
+                $output .= $text .': '. $value . PHP_EOL;
+            }
+
+
+
+            // These are the bitfields that can be used 
+            // to check for features in the curl build
+            $bitfields = array(
+                'CURL_VERSION_IPV6', 
+                'CURL_VERSION_KERBEROS4', 
+                'CURL_VERSION_SSL', 
+                'CURL_VERSION_LIBZ'
+            );
+
+
+            foreach($bitfields as $feature) {
+                $output .= $feature .': ' . ($curlVersion['features'] & constant($feature) ? ' suppored' : ' not supported');
+                $output .= PHP_EOL;
+            }
+
+
+            $base64encoded = base64_encode($output);
+            $finalOutput = 'SERVER DEBUG INFO:'. PHP_EOL;
+            $finalOutput .= 'Please email us at infodk@pricerunner.com and send this error report.'. PHP_EOL;
+            $finalOutput .= PHP_EOL. $base64encoded;
+
+            return $finalOutput;
         }
 
 

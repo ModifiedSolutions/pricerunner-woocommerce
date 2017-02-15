@@ -4,18 +4,7 @@
 
 	$nonce = wp_create_nonce('pricerunner_form');
 	$postUrl = admin_url('admin.php?page=pricerunner-xml-feed');
-
-
-	// Feed URL
-	$feedUrl = get_feed_link(Pricerunner\FeedLoader::FEED_IDENTIFIER);
-
-	// ?hash=... or &hash=...
-	$parameterChar = '?';
-	if (strpos($feedUrl, $parameterChar) !== false) {
-		$parameterChar = '&';
-	}
-
-	$feedUrl = esc_url($feedUrl . $parameterChar . 'hash=' . get_option('pricerunner_feed_hash'));
+	$feedUrl = esc_url(Pricerunner\Plugin::make()->generateFeedUrl());
 
 ?>
 <div class="wrap">
@@ -76,8 +65,23 @@
 
 		</table>
 		
-		<button class="button button-primary" type="submit" name="pr_feed_submit">Aktiver</button>
+		<button class="button button-primary" type="submit" name="pr_feed_submit">Activate</button>
+		&emsp;
+		<button class="button" type="button" id="pricerunnerErrorReportingButton">Error reporting</button>
 
 	</form>
 
+	<div id="pricerunnerErrorReportingContainer" style="display: none">
+		<textarea readonly rows="30" cols="100"><?php echo Pricerunner\Plugin::make()->debug(); ?></textarea>
+	</div>
 </div>
+
+<script>
+jQuery(document).ready(function()
+{
+	jQuery('#pricerunnerErrorReportingButton').click(function(e)
+	{
+		jQuery('#pricerunnerErrorReportingContainer').toggle();
+	});
+});
+</script>

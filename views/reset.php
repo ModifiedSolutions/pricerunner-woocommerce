@@ -59,6 +59,8 @@
 				</th>
 				<td>
 					<a href="<?= $feedUrl; ?>" target="_blank"><?= $feedUrl; ?></a>
+					<br />
+					<small>The feed is updated automatically so you don't have to do anything to get new updates into the feed.</small>
 				</td>
 			</tr>
 
@@ -87,8 +89,26 @@
 		</p>
 
 		<button onclick="return confirm('Are you sure you want to reset the feed?');" type="submit" class="button" name="pr_feed_reset">Reset Pricerunner Feed</button>
+		&emsp;
 		<a href="<?= $feedUrl; ?>&amp;test=1" target="_blank" onclick="return confirm('This operation might take a while, do you want to continue?');" class="button button-primary">Run Feed Test</a>
-
+		&emsp;
+		<button class="button" type="button" id="pricerunnerErrorReportingButton">Error reporting</button>
 	</form>
 
+	<div id="pricerunnerErrorReportingContainer" style="display: none">
+		<textarea readonly rows="30" cols="100"><?php echo Pricerunner\Plugin::make()->debug(); ?></textarea>
+	</div>
+
 </div>
+
+
+<script>
+jQuery(document).ready(function()
+{
+	jQuery('#pricerunnerErrorReportingButton').click(function(e)
+	{
+		jQuery('#pricerunnerErrorReportingContainer').toggle();
+	});
+});
+</script>
+

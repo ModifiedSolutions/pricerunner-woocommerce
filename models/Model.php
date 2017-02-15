@@ -185,12 +185,14 @@
             if (!empty($data)){
                 for ($i = 0; $i < count($data); $i++) {
                     if ($data[$i]->meta_key == '_price') {
-                        $pricerunnerProduct->setPrice($data[$i]->meta_value);
+                        $_price = str_replace(',', '.', $data[$i]->meta_value);
+                        $_price = sprintf("%.2F", $_price);
+                        $pricerunnerProduct->setPrice($_price);
                     }
 
                     if ($data[$i]->meta_key == '_stock_status') {
-                        $stockStatus = $data[$i]->meta_value == 'instock' ? 'In Stock' : 'Out of Stock';
-                        $pricerunnerProduct->setStockStatus($stockStatus);
+                        $_stockStatus = $data[$i]->meta_value == 'instock' ? 'In Stock' : 'Out of Stock';
+                        $pricerunnerProduct->setStockStatus($_stockStatus);
                     }
                 }
             }
@@ -237,7 +239,6 @@
             $pricerunnerProduct->setManufacturer('');
             $pricerunnerProduct->setEan('');
             $pricerunnerProduct->setDeliveryTime('');
-            $pricerunnerProduct->setRetailerMessage('');
             $pricerunnerProduct->setProductState('New');
 
     		return $pricerunnerProduct;

@@ -6,7 +6,7 @@
      * Plugin Name: Pricerunner Feed
      * Plugin URI: 
      * Description: Product XML Feed For Pricerunner.dk
-     * Version: 1.0.10
+     * Version: 1.0.19
      * Author: Modified Solutions ApS
      * Author URI: https://www.modified.dk/
      * Developer: Modified Solutions ApS
@@ -21,7 +21,7 @@
      * This definition must be defined.
      * If it isn't the Pricerunner SDK will not be allowed to function.
      */
-    define('PRICRUNNER_OFFICIAL_PLUGIN_VERSION', 'woo-1.0.10');
+    define('PRICRUNNER_OFFICIAL_PLUGIN_VERSION', 'woo-1.0.19');
 
 
     require_once dirname(__FILE__) .'/classes/FeedLoader.php';
@@ -65,6 +65,10 @@
     	if (!current_user_can('manage_options'))  {
     		$plugin->error(Pricerunner\Plugin::NOT_SUFFICIENT_PERMISSIONS);
     	}
+
+        if (!extension_loaded('curl')) {
+            $plugin->error(Pricerunner\Plugin::CURL_MISSING_ERROR);
+        }
 
         if ($nonceMessage = $plugin->checkNonce() !== true) {
             $plugin->error($nonceMessage);
