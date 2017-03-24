@@ -2,6 +2,9 @@
 
     namespace Pricerunner;
 
+    use WP_Query;
+    use stdClass;
+
     if (!defined('ABSPATH')) exit;
 
     class Model
@@ -57,7 +60,105 @@
     	{
     		$this->db = $db;
             $this->sanitizedProducts = array();
+            $this->category = array();
     	}
+
+
+        /**
+         * Generates categories.
+         *
+         * @param int $productId  
+         * @return void
+         */
+        private function generateCategories($productId)
+        {
+            $terms = wc_get_product_terms($productId, 'product_cat', array('orderby' => 'parent', 'order' => 'DESC'));
+            if (empty($terms)) {
+                return;
+            }
+
+            $mainTerm = apply_filters('woocommerce_breadcrumb_main_term', $terms[0], $terms);
+
+            $this->categoryAncestors($mainTerm->term_id, 'product_cat');
+            $this->addCategory($mainTerm->name, $mainTerm->term_id, $mainTerm->parent);
+        }
+
+
+        /**
+         * Fetches category ancestors and adds them to the category property.
+         * 
+         * @param int $term_id 
+         * @param mixed $taxonomy 
+         * 
+         * @return void
+         */
+        private function categoryAncestors($term_id, $taxonomy)
+        {
+            $ancestors = get_ancestors($term_id, $taxonomy);
+            $ancestors = array_reverse($ancestors);
+
+            foreach ($ancestors as $ancestor) {
+                $ancestor = get_term($ancestor, $taxonomy);
+
+                if (!is_wp_error($ancestor) && $ancestor) {
+                    $this->addCategory($ancestor->name, $ancestor->term_id, $ancestor->parent);
+                }
+            }
+        }
+
+
+        /**
+         * Add category to the category property.
+         *
+         * @param string $name
+         * @param int $id
+         * @param int $parent
+         */
+        public function addCategory($name, $id, $parent)
+        {
+            $this->category[] = array(
+                'name'   => strip_tags($name),
+                'id'     => $id,
+                'parent' => $parent
+            );
+        }
+
+
+        /**
+         * Builds an array of categories in a single dimensional structure.
+         * 
+         * @return \stdClass
+         */
+        public function buildCategory()
+        {
+            $categories = $this->category;
+            $categoryString = '';
+
+            if (empty($categories)) {
+                $dummyObj = new stdClass;
+                $dummyObj->name = '';
+                $dummyObj->id = 0;
+                $dummyObj->parentId = 0;
+
+                return $dummyObj;
+            }
+
+            foreach ($categories as $_category) {
+                $categoryString .= $_category['name'] .' > ';
+            }
+
+            $categoryString = mb_substr($categoryString, 0, -3);
+            $revCategories = array_reverse($categories);
+
+            $this->category = array();
+
+            $obj = new stdClass;
+            $obj->name     = $categoryString;
+            $obj->id       = $revCategories[0]['id'];
+            $obj->parentId = $revCategories[0]['parent'];
+
+            return $obj;
+        }
 
 
     	/**
@@ -69,97 +170,74 @@
     	 * @return 	array
     	 */
     	public function getProducts($categories)
-    	{
-    		/**
-    		 * Pricerunner specifications: http://www.pricerunner.dk/krav-til-produktfilen.html
-    		 * 
-    		 * - REQUIRED FIELDS
-    		 * Category 			Electronic > Digital Cameras
-    		 * Product Name 		EOS 650D
-    		 * SKU 					ABC123
-    		 * Currency 			$, €, DKK... (Don't set this for now. We're assuming it's DKK)
-    		 * Price 				1333.37
-    		 * Shipping Cost 		5 (Only add if it's a flat rate - i.e. shipping cost for a specific product is equal over the whole country)
-    		 * Product URL 			https://www.site.com/product/example-1
-    		 * 
-    		 * - REQUIRED FOR AUTOMATIC MATCHING OF PRODUCTS. WITHOUT THESE LISTINGS MIGHT BE DELAYED OR EVEN PREVENTED
-    		 * Manufacturer SKU
-    		 * Manufacturer 		Canon
-    		 * EAN or UPC 			8714574585567
-    		 * 
-    		 * - OTHER FIELDS
-    		 * Description 			Product description right here
-    		 * Image URL 			https://www.site.com/images/product-image-1.jpg
-    		 * Stock Status 		In Stock / Out of Stock / Preorder
-    		 * Delivery Time 		Delivers in 5-7 days
-    		 * Retailer Message 	Free shipping until... (Max 125 characters)
-    		 * Product State 		New / Used / Refurbished / Open Box
-    		 * ISBN 				0563389532 (REQUIRED FOR BOOK RETAILERS)
-    		 * Catalog Id 			73216 (Only for CDs, DVDs, HD-DVDs and Blu-Ray films)
-    		 * Warranty 			1 year warranty (Keep under 25 characters if possible - max supported: 70)
-    		 */
+        {
+            /**
+             * Pricerunner specifications: http://www.pricerunner.dk/krav-til-produktfilen.html
+             * 
+             * - REQUIRED FIELDS
+             * Category             Electronic > Digital Cameras
+             * Product Name         EOS 650D
+             * SKU                  ABC123
+             * Currency             $, €, DKK... (Don't set this for now. We're assuming it's DKK)
+             * Price                1333.37
+             * Shipping Cost        5 (Only add if it's a flat rate - i.e. shipping cost for a specific product is equal over the whole country)
+             * Product URL          https://www.site.com/product/example-1
+             * 
+             * - REQUIRED FOR AUTOMATIC MATCHING OF PRODUCTS. WITHOUT THESE LISTINGS MIGHT BE DELAYED OR EVEN PREVENTED
+             * Manufacturer SKU
+             * Manufacturer         Canon
+             * EAN or UPC           8714574585567
+             * 
+             * - OTHER FIELDS
+             * Description          Product description right here
+             * Image URL            https://www.site.com/images/product-image-1.jpg
+             * Stock Status         In Stock / Out of Stock / Preorder
+             * Delivery Time        Delivers in 5-7 days
+             * Retailer Message     Free shipping until... (Max 125 characters)
+             * Product State        New / Used / Refurbished / Open Box
+             * ISBN                 0563389532 (REQUIRED FOR BOOK RETAILERS)
+             * Catalog Id           73216 (Only for CDs, DVDs, HD-DVDs and Blu-Ray films)
+             * Warranty             1 year warranty (Keep under 25 characters if possible - max supported: 70)
+             */
 
-    		$sql = "
-            SELECT
-                p.ID AS id,
-                p.post_parent AS parentId,
-                p.post_type AS postType,
-                p.post_status AS postStatus,
-                p.post_title AS productName,
-                p.post_name AS slug,
-                p.post_excerpt AS description,
-                p.post_content AS content,
-                tr.term_taxonomy_id AS categoryId
-    		FROM
-                ". $this->db->prefix ."posts AS p
-                
-    		LEFT JOIN (
-                SELECT object_id, MAX(term_taxonomy_id) AS term_taxonomy_id
-                FROM ". $this->db->prefix ."term_relationships
-                GROUP BY object_id
-                ) AS tr ON tr.object_id = p.id
-                
-    		LEFT JOIN ". $this->db->prefix ."term_taxonomy AS tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
+            $args = array(
+                'post_type' => ['product', 'product_variation'],
+                'posts_per_page' => -1
+            );
 
-    		WHERE
-                (p.post_type = 'product' OR p.post_type = 'product_variation')
-                AND p.post_status = 'publish'
-                AND (
-                    CASE WHEN p.post_type = 'product'
-                         THEN tt.taxonomy = 'product_cat'
-                         ELSE TRUE = TRUE
-                    END
-                )
-                
-    		ORDER BY
-                p.id, p.post_parent ASC";
+            $getProducts = new WP_Query($args);
+            $products = array();
 
-    		$getProducts = $this->getResults($sql);
+            while ($getProducts->have_posts()) {
+                $getProducts->the_post(); 
+                global $product;
 
-            foreach ($getProducts as $product){
-                $this->sanitizedProducts[$product->id] = $product;
-            }
-            unset($product);
+                $_product = new stdClass();
 
-            $products = [];
-    		foreach ($getProducts as $product) {
+                $_product->id = $product->id;
+                $_product->parentId = $product->variation_id;
+                $_product->postType = $product->post->post_type;
+                $_product->postStatus = $product->post->post_status;
+                $_product->productName = $product->post->post_title;
+                $_product->slug = $product->post->post_name;
+                $_product->description = $product->post->post_excerpt;
+                $_product->content = $product->post->post_content;
 
-    			$product->category = $categories[$product->categoryId];
+                $this->sanitizedProducts[$_product->id] = $_product;
+                unset($product);
 
-                if ($product->parentId == 0) {
-
-                    $prProduct = $this->createPricerunnerProduct($product);
-
-    			} else {
+                if ($_product->parentId != 0) {
                     // For now we exclude generation of variant products as single entities.
                     continue;
-    			}
+                }
 
-    			$products[] = $prProduct;
-    		}
+                $products[] = $this->createPricerunnerProduct($_product);
+
+                unset($_product);
+            }
 
             return $products;
-    	}
+        }
 
 
     	/**
@@ -181,28 +259,37 @@
             $pricerunnerProduct = new \PricerunnerSDK\Models\Product();
 
     		// Get product specific data from another table
-    		$data = $this->getProductData($product->id);
-            if (!empty($data)){
-                for ($i = 0; $i < count($data); $i++) {
-                    if ($data[$i]->meta_key == '_price') {
-                        $_price = str_replace(',', '.', $data[$i]->meta_value);
+    		$metaData = $this->getProductData($product->id);
+
+            foreach ($metaData as $_meta) {
+                
+                $metaKey = $_meta->meta_key;
+                $metaValue = $_meta->meta_value;
+
+                switch ($metaKey) {
+                    case '_price':
+                        $_price = str_replace(',', '.', $metaValue);
                         $_price = sprintf("%.2F", $_price);
                         $pricerunnerProduct->setPrice($_price);
-                    }
+                        break;
 
-                    if ($data[$i]->meta_key == '_stock_status') {
-                        $_stockStatus = $data[$i]->meta_value == 'instock' ? 'In Stock' : 'Out of Stock';
+                    case '_stock_status':
+                        $_stockStatus = $metaValue == 'instock' ? 'In Stock' : 'Out of Stock';
                         $pricerunnerProduct->setStockStatus($_stockStatus);
-                    }
+                        break;
+
+                    case '_sku':
+                        $pricerunnerProduct->setSku($metaValue);
+                        break;
                 }
             }
 
-            if ($product->parentId == 0) {
-                $category = $product->category;
-            } else {
-                $category = $this->sanitizedProducts[$realIdForData]->category;
+            $this->generateCategories($product->id);
+            $category = $this->buildCategory()->name;
+            
+            if(!empty($category)) {
+                $pricerunnerProduct->setCategoryName($category);
             }
-            $pricerunnerProduct->setCategoryName($category);
 
             if ($product->parentId == 0) {
                 $productName = $product->productName;
@@ -211,7 +298,7 @@
             }
             $pricerunnerProduct->setProductName($productName);
 
-    		$pricerunnerProduct->setSku($product->id);
+
     		$pricerunnerProduct->setShippingCost('');
     		$pricerunnerProduct->setProductUrl(get_bloginfo('wpurl') .'/?product='. $product->slug);
 
@@ -261,7 +348,7 @@
     			`". $this->db->prefix ."postmeta`
     		WHERE
     			`post_id` = '". $id ."'
-    			AND (`meta_key` = '_price' OR `meta_key` = '_stock_status')
+    			AND `meta_key` IN ('_price', '_stock_status', '_sku')
             ";
 
     		return $this->getResults($sql);
